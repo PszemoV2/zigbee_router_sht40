@@ -19,6 +19,7 @@ namespace config
   constexpr UBaseType_t SENSOR_TASK_PRIORITY = 10;
   constexpr uint8_t LED_ON = LOW;
   constexpr uint8_t LED_OFF = HIGH;
+  constexpr uint16_t SERIAL_DELAY_MS = 2000;
 } // namespace config
 
 namespace
@@ -118,6 +119,19 @@ namespace
     Serial.println(serialNumber);
   }
 
+  void serialDelay() {
+    digitalWrite(LED_BUILTIN, config::LED_ON);
+
+    TickType_t startTime = xTaskGetTickCount();
+    const TickType_t timeout = pdMS_TO_TICKS(config::SERIAL_DELAY_MS);
+    while (!Serial && (xTaskGetTickCount() - startTime) < timeout)
+    {
+      vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    digitalWrite(LED_BUILTIN, config::LED_OFF);
+  }
+
   void tempSensorValueUpdate(void *arg)
   {
     (void)arg;
@@ -179,8 +193,8 @@ void setup()
   pinMode(button, INPUT_PULLUP);
   digitalWrite(LED_BUILTIN, config::LED_OFF);
 
+  serialDelay();
   initializeZigbee();
-
   initializeSht4x();
 
   xTaskCreate(tempSensorValueUpdate,
