@@ -20,12 +20,16 @@ namespace config
   constexpr uint8_t LED_ON = LOW;
   constexpr uint8_t LED_OFF = HIGH;
   constexpr uint16_t SERIAL_DELAY_MS = 2000;
+
+  constexpr uint8_t UV_ENDPOINT = 11;
+  constexpr uint8_t UV_SENSOR_PIN = GPIO_NUM_0;
 } // namespace config
 
 namespace
 {
   uint8_t button = BOOT_PIN;
   ZigbeeTempSensor zbTempSensor(config::TEMPERATURE_ENDPOINT);
+  ZigbeeAnalog zbUVSensor(config::UV_ENDPOINT);
   SensirionI2cSht4x sensor;
 
   void blinkLEDonIdentify(uint16_t identifySeconds)
@@ -71,6 +75,13 @@ namespace
     zbTempSensor.onIdentify(blinkLEDonIdentify);
     Zigbee.addEndpoint(&zbTempSensor);
 
+    zbUVSensor.addAnalogInput();
+    zbUVSensor.setAnalogInputDescription("UV Sensor (mV)");
+    zbUVSensor.setAnalogInputApplication(EZB_ZCL_ANALOG_INPUT_APPLICATION_TYPE_COUNT_UNITLESS);
+    zbUVSensor.setAnalogInputMinMax(0, 3500);
+    zbUVSensor.setAnalogInputResolution(1);
+    Zigbee.addEndpoint(&zbUVSensor);
+
     Serial.println("Starting Zigbee...");
     if (!Zigbee.begin())
     {
@@ -99,6 +110,7 @@ namespace
 
     zbTempSensor.setReporting(1, 60, 0.1);
     zbTempSensor.setHumidityReporting(1, 60, 0.1);
+    zbUVSensor.setAnalogInputReporting(1, 60, 5);
   }
 
   void initializeSht4x()
@@ -156,6 +168,10 @@ namespace
         Serial.printf("%f°C\t%f%% rH\n", temperature, humidity);
       }
 
+      // UV Sensor
+      float voltageReading = analogReadMilliVolts(config::UV_SENSOR_PIN);
+      zbUVSensor.setAnalogInput(voltageReading);
+
       vTaskDelayUntil(&lastWakeTime, config::SENSOR_READ_INTERVAL_MS);
     }
   }
@@ -184,6 +200,7 @@ namespace
     Serial.println("Reporting current data");
     zbTempSensor.reportTemperature();
     zbTempSensor.reportHumidity();
+    zbUVSensor.reportAnalogInput();
   }
 } // namespace
 
@@ -194,6 +211,8 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(button, INPUT_PULLUP);
   digitalWrite(LED_BUILTIN, config::LED_OFF);
+
+  pinMode(config::UV_SENSOR_PIN, INPUT);
 
   serialDelay();
   initializeZigbee();
