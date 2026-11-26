@@ -98,6 +98,7 @@ namespace
     Serial.println(localTime, "%A, %B %d %Y %H:%M:%S");
 
     zbTempSensor.setReporting(1, 60, 0.1);
+    zbTempSensor.setHumidityReporting(1, 60, 0.1);
   }
 
   void initializeSht4x()
@@ -182,6 +183,7 @@ namespace
 
     Serial.println("Reporting current data");
     zbTempSensor.reportTemperature();
+    zbTempSensor.reportHumidity();
   }
 } // namespace
 
